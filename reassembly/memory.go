@@ -204,6 +204,7 @@ func (p *StreamPool) getConnection(k key, end bool, ts time.Time, tcp *layers.TC
 		// FIXME: delete s ?
 		return conn2, half2, rev2
 	}
+	conn, half, rev = p.newConnection(k, s, ts)
 	p.conns[k] = conn
 	return conn, half, rev
 }

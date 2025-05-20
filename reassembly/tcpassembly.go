@@ -1190,6 +1190,10 @@ func (a *Assembler) skipFlush(conn *connection, half *halfconnection) {
 	}
 	a.ret = a.ret[:0]
 	a.addNextFromConn(half)
+	if len(a.ret) == 0 {
+		a.closeHalfConnection(conn, half)
+		return
+	}
 	nextSeq := a.sendToConnection(conn, half, a.ret[0].assemblerContext())
 	if nextSeq != invalidSequence {
 		half.nextSeq = nextSeq
@@ -1201,10 +1205,17 @@ func (a *Assembler) closeHalfConnection(conn *connection, half *halfconnection) 
 		log.Printf("%v closing", conn)
 	}
 	half.closed = true
-	for p := half.first; p != nil; p = p.next {
+	var next *page
+	for p := half.first; p != nil; p = next {
 		// FIXME: it should be already empty
+		next = p.next
 		a.pc.replace(p)
 		half.pages--
+	}
+	for p := half.saved; p != nil; p = next {
+		// FIXME: it should be already empty
+		next = p.next
+		a.pc.replace(p)
 	}
 	if conn.s2c.closed && conn.c2s.closed {
 		if half.stream.ReassemblyComplete(nil) { //FIXME: which context to pass ?
